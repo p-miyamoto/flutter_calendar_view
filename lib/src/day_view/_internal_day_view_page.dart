@@ -14,7 +14,7 @@ import '../painters.dart';
 import '../typedefs.dart';
 
 /// Defines a single day page.
-class InternalDayViewPage<T extends Object?> extends StatelessWidget {
+class InternalDayViewPage<T extends Object?> extends StatefulWidget {
   /// Width of the page
   final double width;
 
@@ -98,7 +98,14 @@ class InternalDayViewPage<T extends Object?> extends StatelessWidget {
   /// Settings for half hour indicator lines.
   final HourIndicatorSettings halfHourIndicatorSettings;
 
-  final ScrollController scrollController;
+  // final ScrollController scrollController;
+  final void Function(ScrollController) scrollListener;
+
+  /// Scroll offset of day view page.
+  final double scrollOffset;
+
+  /// Scroll start duration of day view page.
+  final Duration? startDuration;
 
   /// Defines a single day page.
   const InternalDayViewPage({
@@ -125,101 +132,137 @@ class InternalDayViewPage<T extends Object?> extends StatelessWidget {
     required this.minuteSlotSize,
     required this.scrollNotifier,
     required this.fullDayEventBuilder,
-    required this.scrollController,
     required this.dayDetectorBuilder,
     required this.showHalfHours,
     required this.halfHourIndicatorSettings,
+    required this.scrollListener,
+    this.startDuration,
+    this.scrollOffset = 0.0
   }) : super(key: key);
 
   @override
+  State<InternalDayViewPage> createState() => _InternalDayViewPageState();
+}
+class _InternalDayViewPageState<T extends Object?>
+    extends State<InternalDayViewPage<T>> {
+  late ScrollController scrollController;
+
+  @override
+  void initState() {
+    super.initState();
+    scrollController = ScrollController(
+      initialScrollOffset: widget.startDuration == null? widget.scrollOffset: 0.0,
+    );
+    scrollController.addListener(_scrollControllerListener);
+
+    if(widget.startDuration != null){
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+          animateToDuration(widget.startDuration!);
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    scrollController
+      ..removeListener(_scrollControllerListener)
+      ..dispose();
+    super.dispose();
+  }
+
+  void _scrollControllerListener() {
+    widget.scrollListener(scrollController);
+  }
+
+  @override
   Widget build(BuildContext context) {
-    final fullDayEventList = controller.getFullDayEvent(date);
+    final fullDayEventList = widget.controller.getFullDayEvent(widget.date);
     return Container(
-      height: height,
-      width: width,
+      height: widget.height,
+      width: widget.width,
       child: Column(
         children: [
           fullDayEventList.isEmpty
               ? SizedBox.shrink()
-              : fullDayEventBuilder(fullDayEventList, date),
+              : widget.fullDayEventBuilder(fullDayEventList, widget.date),
           Expanded(
             child: SingleChildScrollView(
               controller: scrollController,
               child: SizedBox(
-                height: height,
-                width: width,
+                height: widget.height,
+                width: widget.width,
                 child: Stack(
                   children: [
                     CustomPaint(
-                      size: Size(width, height),
+                      size: Size(widget.width, widget.height),
                       painter: HourLinePainter(
-                        lineColor: hourIndicatorSettings.color,
-                        lineHeight: hourIndicatorSettings.height,
-                        offset: timeLineWidth + hourIndicatorSettings.offset,
-                        minuteHeight: heightPerMinute,
-                        verticalLineOffset: verticalLineOffset,
-                        showVerticalLine: showVerticalLine,
-                        lineStyle: hourIndicatorSettings.lineStyle,
-                        dashWidth: hourIndicatorSettings.dashWidth,
-                        dashSpaceWidth: hourIndicatorSettings.dashSpaceWidth,
+                        lineColor: widget.hourIndicatorSettings.color,
+                        lineHeight: widget.hourIndicatorSettings.height,
+                        offset: widget.timeLineWidth + widget.hourIndicatorSettings.offset,
+                        minuteHeight: widget.heightPerMinute,
+                        verticalLineOffset: widget.verticalLineOffset,
+                        showVerticalLine: widget.showVerticalLine,
+                        lineStyle: widget.hourIndicatorSettings.lineStyle,
+                        dashWidth: widget.hourIndicatorSettings.dashWidth,
+                        dashSpaceWidth: widget.hourIndicatorSettings.dashSpaceWidth,
                       ),
                     ),
-                    if (showHalfHours)
+                    if (widget.showHalfHours)
                       CustomPaint(
-                        size: Size(width, height),
+                        size: Size(widget.width, widget.height),
                         painter: HalfHourLinePainter(
-                          lineColor: halfHourIndicatorSettings.color,
-                          lineHeight: halfHourIndicatorSettings.height,
+                          lineColor: widget.halfHourIndicatorSettings.color,
+                          lineHeight: widget.halfHourIndicatorSettings.height,
                           offset:
-                              timeLineWidth + halfHourIndicatorSettings.offset,
-                          minuteHeight: heightPerMinute,
-                          lineStyle: halfHourIndicatorSettings.lineStyle,
-                          dashWidth: halfHourIndicatorSettings.dashWidth,
+                              widget.timeLineWidth + widget.halfHourIndicatorSettings.offset,
+                          minuteHeight: widget.heightPerMinute,
+                          lineStyle: widget.halfHourIndicatorSettings.lineStyle,
+                          dashWidth: widget.halfHourIndicatorSettings.dashWidth,
                           dashSpaceWidth:
-                              halfHourIndicatorSettings.dashSpaceWidth,
+                              widget.halfHourIndicatorSettings.dashSpaceWidth,
                         ),
                       ),
-                    dayDetectorBuilder(
-                      width: width,
-                      height: height,
-                      heightPerMinute: heightPerMinute,
-                      date: date,
-                      minuteSlotSize: minuteSlotSize,
+                    widget.dayDetectorBuilder(
+                      width: widget.width,
+                      height: widget.height,
+                      heightPerMinute: widget.heightPerMinute,
+                      date: widget.date,
+                      minuteSlotSize: widget.minuteSlotSize,
                     ),
                     Align(
                       alignment: Alignment.centerRight,
                       child: EventGenerator<T>(
-                        height: height,
-                        date: date,
-                        onTileTap: onTileTap,
-                        eventArranger: eventArranger,
-                        events: controller.getEventsOnDay(date),
-                        heightPerMinute: heightPerMinute,
-                        eventTileBuilder: eventTileBuilder,
-                        scrollNotifier: scrollNotifier,
-                        width: width -
-                            timeLineWidth -
-                            hourIndicatorSettings.offset -
-                            verticalLineOffset,
+                        height: widget.height,
+                        date: widget.date,
+                        onTileTap: widget.onTileTap,
+                        eventArranger: widget.eventArranger,
+                        events: widget.controller.getEventsOnDay(widget.date),
+                        heightPerMinute: widget.heightPerMinute,
+                        eventTileBuilder: widget.eventTileBuilder,
+                        scrollNotifier: widget.scrollNotifier,
+                        width: widget.width -
+                            widget.timeLineWidth -
+                            widget.hourIndicatorSettings.offset -
+                            widget.verticalLineOffset,
                       ),
                     ),
                     TimeLine(
-                      height: height,
-                      hourHeight: hourHeight,
-                      timeLineBuilder: timeLineBuilder,
-                      timeLineOffset: timeLineOffset,
-                      timeLineWidth: timeLineWidth,
-                      showHalfHours: showHalfHours,
-                      key: ValueKey(heightPerMinute),
+                      height: widget.height,
+                      hourHeight: widget.hourHeight,
+                      timeLineBuilder: widget.timeLineBuilder,
+                      timeLineOffset: widget.timeLineOffset,
+                      timeLineWidth: widget.timeLineWidth,
+                      showHalfHours: widget.showHalfHours,
+                      key: ValueKey(widget.heightPerMinute),
                     ),
-                    if (showLiveLine && liveTimeIndicatorSettings.height > 0)
+                    if (widget.showLiveLine && widget.liveTimeIndicatorSettings.height > 0)
                       IgnorePointer(
                         child: LiveTimeIndicator(
-                          liveTimeIndicatorSettings: liveTimeIndicatorSettings,
-                          width: width,
-                          height: height,
-                          heightPerMinute: heightPerMinute,
-                          timeLineWidth: timeLineWidth,
+                          liveTimeIndicatorSettings: widget.liveTimeIndicatorSettings,
+                          width: widget.width,
+                          height: widget.height,
+                          heightPerMinute: widget.heightPerMinute,
+                          timeLineWidth: widget.timeLineWidth,
                         ),
                       ),
                   ],
@@ -229,6 +272,26 @@ class InternalDayViewPage<T extends Object?> extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Future<void> animateToDuration(
+    Duration startDuration, {
+    Duration duration = const Duration(milliseconds: 200),
+    Curve curve = Curves.linear,
+  }) async {
+    final offSetForSingleMinute = widget.height / 24 / 60;
+    final startDurationInMinutes = startDuration.inMinutes;
+
+    // Added ternary condition below to take care if user passing duration
+    // above 24 hrs then we take it max as 24 hours only
+    final offset = offSetForSingleMinute *
+        (startDurationInMinutes > 3600 ? 3600 : startDurationInMinutes);
+    debugPrint("offSet $offset");
+    scrollController.animateTo(
+      offset.toDouble(),
+      duration: duration,
+      curve: curve,
     );
   }
 }

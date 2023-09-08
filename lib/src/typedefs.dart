@@ -70,3 +70,5 @@ typedef DateTapCallback = void Function(DateTime date);
 
 typedef EventFilter<T extends Object?> = List<CalendarEventData<T>> Function(
     DateTime date, List<CalendarEventData<T>> events);
+
+typedef ScrollCallback = void Function(double offset);
