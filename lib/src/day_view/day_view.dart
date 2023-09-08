@@ -186,7 +186,10 @@ class DayView<T extends Object?> extends StatefulWidget {
 
   /// Duration from where default day view will be visible
   /// By default it will be Duration(hours:0)
-  final Duration startDuration;
+  final Duration? startDuration;
+
+  /// This method will be called when user scroll on calendar.
+  final ScrollCallback? onScroll;
 
   /// Main widget for day view.
   const DayView({
@@ -227,7 +230,8 @@ class DayView<T extends Object?> extends StatefulWidget {
     this.dayDetectorBuilder,
     this.showHalfHours = false,
     this.halfHourIndicatorSettings,
-    this.startDuration = const Duration(hours: 0),
+    this.startDuration = null,
+    this.onScroll,
   })  : assert(timeLineOffset >= 0,
             "timeLineOffset must be greater than or equal to 0"),
         assert(width == null || width > 0,
@@ -252,11 +256,14 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
   late double _height;
   late double _timeLineWidth;
   late double _hourHeight;
+  late double _lastScrollOffset;
   late DateTime _currentDate;
   late DateTime _maxDate;
   late DateTime _minDate;
   late int _totalDays;
   late int _currentIndex;
+  late Duration? _setStartDuration;
+  late bool _isStart;
 
   late EventArranger<T> _eventArranger;
 
@@ -278,10 +285,6 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
 
   EventController<T>? _controller;
 
-  late ScrollController _scrollController;
-
-  ScrollController get scrollController => _scrollController;
-
   late VoidCallback _reloadCallback;
 
   final _scrollConfiguration = EventScrollConfiguration<T>();
@@ -289,6 +292,9 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
   @override
   void initState() {
     super.initState();
+    _lastScrollOffset = widget.scrollOffset;
+    _setStartDuration = widget.startDuration;
+    _isStart = true;
 
     _reloadCallback = _reload;
     _setDateRange();
@@ -298,8 +304,6 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
     _regulateCurrentDate();
 
     _calculateHeights();
-    _scrollController =
-        ScrollController(initialScrollOffset: widget.scrollOffset);
     _pageController = PageController(initialPage: _currentIndex);
     _eventArranger = widget.eventArranger ?? SideEventArranger<T>();
     _assignBuilders();
@@ -323,10 +327,6 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
         // user adds new events.
         ..addListener(_reloadCallback);
     }
-
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      animateToDuration(widget.startDuration);
-    });
   }
 
   @override
@@ -394,6 +394,10 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
                       itemBuilder: (_, index) {
                         final date = DateTime(_minDate.year, _minDate.month,
                             _minDate.day + index);
+                        if(!_isStart){
+                          _setStartDuration = null;
+                        }
+                        _isStart = false;
                         return ValueListenableBuilder(
                           valueListenable: _scrollConfiguration,
                           builder: (_, __, ___) => InternalDayViewPage<T>(
@@ -424,10 +428,12 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
                             minuteSlotSize: widget.minuteSlotSize,
                             scrollNotifier: _scrollConfiguration,
                             fullDayEventBuilder: _fullDayEventBuilder,
-                            scrollController: _scrollController,
                             showHalfHours: widget.showHalfHours,
                             halfHourIndicatorSettings:
                                 _halfHourIndicatorSettings,
+                            scrollOffset: _lastScrollOffset,
+                            scrollListener: _scrollPageListener,
+                            startDuration: _setStartDuration,
                           ),
                         );
                       },
@@ -669,7 +675,6 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
         _currentIndex = index;
       });
     }
-    animateToDuration(widget.startDuration);
     widget.onPageChange?.call(_currentDate, _currentIndex);
   }
 
@@ -786,41 +791,15 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
     );
   }
 
-  /// Animate to specific offset in a day view using the start duration
-  Future<void> animateToDuration(
-    Duration startDuration, {
-    Duration duration = const Duration(milliseconds: 200),
-    Curve curve = Curves.linear,
-  }) async {
-    final offSetForSingleMinute = _height / 24 / 60;
-    final startDurationInMinutes = startDuration.inMinutes;
-
-    // Added ternary condition below to take care if user passing duration
-    // above 24 hrs then we take it max as 24 hours only
-    final offset = offSetForSingleMinute *
-        (startDurationInMinutes > 3600 ? 3600 : startDurationInMinutes);
-    debugPrint("offSet $offset");
-    _scrollController.animateTo(
-      offset.toDouble(),
-      duration: duration,
-      curve: curve,
-    );
-  }
-
-  /// Animate to specific scroll controller offset
-  void animateTo(
-    double offset, {
-    Duration duration = const Duration(milliseconds: 200),
-    Curve curve = Curves.linear,
-  }) {
-    _scrollController.animateTo(
-      offset,
-      duration: duration,
-      curve: curve,
-    );
-  }
-
   /// Returns the current visible date in day view.
   DateTime get currentDate =>
       DateTime(_currentDate.year, _currentDate.month, _currentDate.day);
+
+  /// Listener for every day page ScrollController
+  void _scrollPageListener(ScrollController controller) {
+    _lastScrollOffset = controller.offset;
+    if(widget.onScroll != null){
+      widget.onScroll!(_lastScrollOffset);
+    }
+  }
 }
