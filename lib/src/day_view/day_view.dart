@@ -404,6 +404,7 @@ class DayViewState<T extends Object?> extends State<DayView<T>> {
                             key: ValueKey(
                                 _hourHeight.toString() + date.toString()),
                             width: _width,
+                            scrollPhysics: widget.scrollPhysics,
                             liveTimeIndicatorSettings:
                                 _liveTimeIndicatorSettings,
                             timeLineBuilder: _timeLineBuilder,
