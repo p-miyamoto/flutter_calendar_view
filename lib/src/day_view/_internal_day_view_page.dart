@@ -150,16 +150,21 @@ class _InternalDayViewPageState<T extends Object?>
   @override
   void initState() {
     super.initState();
-    scrollController = ScrollController(
-      initialScrollOffset: widget.startDuration == null? widget.scrollOffset: 0.0,
-    );
-    scrollController.addListener(_scrollControllerListener);
 
+    var initialOffset = widget.scrollOffset;
     if(widget.startDuration != null){
-      WidgetsBinding.instance.addPostFrameCallback((_) {
-          animateToDuration(widget.startDuration!);
-      });
+      initialOffset = getStartOffset(widget.startDuration!);
     }
+
+    scrollController = ScrollController(
+      initialScrollOffset: initialOffset,
+    );
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollControllerListener();
+    });
+
+    scrollController.addListener(_scrollControllerListener);
   }
 
   @override
@@ -293,5 +298,19 @@ class _InternalDayViewPageState<T extends Object?>
       duration: duration,
       curve: curve,
     );
+  }
+
+  double getStartOffset(
+    Duration startDuration
+  ){
+    final offSetForSingleMinute = widget.height / 24 / 60;
+    final startDurationInMinutes = startDuration.inMinutes;
+
+    // Added ternary condition below to take care if user passing duration
+    // above 24 hrs then we take it max as 24 hours only
+    final offset = offSetForSingleMinute *
+        (startDurationInMinutes > 3600 ? 3600 : startDurationInMinutes);
+    
+    return offset;
   }
 }
