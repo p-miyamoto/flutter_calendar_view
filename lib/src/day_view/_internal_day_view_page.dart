@@ -160,6 +160,10 @@ class _InternalDayViewPageState<T extends Object?>
       initialScrollOffset: initialOffset,
     );
 
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollControllerListener();
+    });
+
     scrollController.addListener(_scrollControllerListener);
   }
 
