@@ -157,7 +157,7 @@ class _InternalDayViewPageState<T extends Object?>
 
     if(widget.startDuration != null){
       WidgetsBinding.instance.addPostFrameCallback((_) {
-          animateToDuration(widget.startDuration!);
+          jumpToDuration(widget.startDuration!);
       });
     }
   }
@@ -293,5 +293,19 @@ class _InternalDayViewPageState<T extends Object?>
       duration: duration,
       curve: curve,
     );
+  }
+
+  Future<void> jumpToDuration(
+    Duration startDuration
+  ) async {
+    final offSetForSingleMinute = widget.height / 24 / 60;
+    final startDurationInMinutes = startDuration.inMinutes;
+
+    // Added ternary condition below to take care if user passing duration
+    // above 24 hrs then we take it max as 24 hours only
+    final offset = offSetForSingleMinute *
+        (startDurationInMinutes > 3600 ? 3600 : startDurationInMinutes);
+    debugPrint("offSet $offset");
+    scrollController.jumpTo(offset.toDouble());
   }
 }
