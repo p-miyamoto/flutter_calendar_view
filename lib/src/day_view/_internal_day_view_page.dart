@@ -104,6 +104,9 @@ class InternalDayViewPage<T extends Object?> extends StatefulWidget {
   /// Scroll offset of day view page.
   final double scrollOffset;
 
+  /// Use this field to disable the calendar scrolling
+  final ScrollPhysics? scrollPhysics;
+
   /// Scroll start duration of day view page.
   final Duration? startDuration;
 
@@ -136,6 +139,7 @@ class InternalDayViewPage<T extends Object?> extends StatefulWidget {
     required this.showHalfHours,
     required this.halfHourIndicatorSettings,
     required this.scrollListener,
+    this.scrollPhysics,
     this.startDuration,
     this.scrollOffset = 0.0
   }) : super(key: key);
@@ -193,6 +197,7 @@ class _InternalDayViewPageState<T extends Object?>
           Expanded(
             child: SingleChildScrollView(
               controller: scrollController,
+              physics: widget.scrollPhysics,
               child: SizedBox(
                 height: widget.height,
                 width: widget.width,
