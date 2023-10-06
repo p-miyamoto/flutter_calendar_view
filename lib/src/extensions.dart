@@ -169,18 +169,19 @@ extension MyList on List<CalendarEventData> {
   // Below function will add the new event in sorted manner(startTimeWise) in
   // the existing list of CalendarEventData.
   void addEventInSortedManner(CalendarEventData event) {
-    var addIndex = -1;
-    for (var i = 0; i < this.length; i++) {
-      if (event.startTime!.compareTo(this[i].startTime!) <= 0) {
-        addIndex = i;
-        break;
-      }
-    }
+    // var addIndex = -1;
+    // for (var i = 0; i < this.length; i++) {
+    //   if (event.startTime!.compareTo(this[i].startTime!) <= 0) {
+    //     addIndex = i;
+    //     break;
+    //   }
+    // }
 
-    if (addIndex > -1) {
-      this.insert(addIndex, event);
-    } else {
-      this.add(event);
-    }
+    // if (addIndex > -1) {
+    //   this.insert(addIndex, event);
+    // } else {
+    //   this.add(event);
+    // }
+    this.add(event);
   }
 }
